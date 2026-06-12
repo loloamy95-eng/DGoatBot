@@ -5,18 +5,22 @@ app.get("/", (req, res) => {
   res.send("DGoatBot est en ligne !");
 });
 
-const PORT = process.env.PORT || 3000;
+// IMPORTANT Render port
+const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
-  console.log(`Serveur web lancé sur le port ${PORT}`);
+  console.log("Serveur web lancé sur le port " + PORT);
 });
 
-// =====================
-// DISCORD BOT
-// =====================
+const {
+  Client,
+  GatewayIntentBits,
+  REST,
+  Routes,
+  SlashCommandBuilder
+} = require("discord.js");
 
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require("discord.js");
-
+// 🤖 BOT
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -30,10 +34,10 @@ const CLIENT_ID = "1511794170614911106";
 const GUILD_ID = "1500223164481802471";
 const TOKEN = process.env.TOKEN;
 
-// =====================
-// SLASH COMMANDS
-// =====================
+// 🔧 MAINTENANCE MODE
+let maintenance = false;
 
+// 📌 COMMANDES
 const commands = [
   new SlashCommandBuilder()
     .setName("ping")
@@ -53,23 +57,16 @@ const commands = [
     ),
 
   new SlashCommandBuilder()
-    .setName("blague")
-    .setDescription("Raconte une blague"),
-
-  new SlashCommandBuilder()
-    .setName("8ball")
-    .setDescription("Pose une question à la boule magique")
-    .addStringOption(option =>
-      option.setName("question")
-        .setDescription("Ta question")
+    .setName("maintenance")
+    .setDescription("Active ou désactive le mode maintenance")
+    .addBooleanOption(option =>
+      option.setName("etat")
+        .setDescription("true = ON / false = OFF")
         .setRequired(true)
     )
 ].map(cmd => cmd.toJSON());
 
-// =====================
-// ENREGISTREMENT COMMANDES
-// =====================
-
+// 🚀 REGISTER COMMANDS
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
 (async () => {
@@ -87,19 +84,19 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
   }
 })();
 
-// =====================
-// EVENTS FUN
-// =====================
-
+// 💬 MESSAGE FUN
 client.on("messageCreate", (message) => {
   if (message.author.bot) return;
 
+  // bloque si maintenance
+  if (maintenance) return;
+
   const replies = [
     "Hmm intéressant 👀",
-    "Je vois ça 🤔",
     "Ok ok 😄",
-    "Explique plus",
-    "Stylé ça 🔥"
+    "Je vois 🤔",
+    "Stylé 🔥",
+    "Explique plus"
   ];
 
   if (Math.random() < 0.12) {
@@ -107,62 +104,58 @@ client.on("messageCreate", (message) => {
   }
 });
 
-// =====================
-// INTERACTIONS
-// =====================
-
+// ⚙️ INTERACTIONS
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
+  // 🔧 BLOCK MAINTENANCE (admins only bypass)
+  if (maintenance && !interaction.member.permissions.has("Administrator")) {
+    return interaction.reply({
+      content: "🔧 BOT EN PHASE DE MISE À JOUR MERCI DE NE PAS M'UTILISER POUR FAIRE DES COMMANDES",
+      ephemeral: true
+    });
+  }
+
+  // PING
   if (interaction.commandName === "ping") {
     return interaction.reply("🏓 pong !");
   }
 
+  // ROLL
   if (interaction.commandName === "roll") {
     const result = Math.floor(Math.random() * 6) + 1;
-    return interaction.reply(`🎲 Tu as fait ${result}`);
+    return interaction.reply(`🎲 ${result}`);
   }
 
+  // SAY
   if (interaction.commandName === "say") {
     const msg = interaction.options.getString("message");
     return interaction.reply(msg);
   }
 
-  if (interaction.commandName === "blague") {
-    const jokes = [
-      "Pourquoi les plongeurs plongent toujours en arrière ? Parce que sinon ils tombent dans le bateau 😂",
-      "Je connais une blague sur le JavaScript… mais elle est undefined 🤣",
-      "T’es tellement lent que même ton ombre t’a quitté 💀"
-    ];
-    return interaction.reply(jokes[Math.floor(Math.random() * jokes.length)]);
-  }
+  // MAINTENANCE COMMAND
+  if (interaction.commandName === "maintenance") {
+    if (!interaction.member.permissions.has("Administrator")) {
+      return interaction.reply({
+        content: "❌ Tu n’as pas la permission admin",
+        ephemeral: true
+      });
+    }
 
-  if (interaction.commandName === "8ball") {
-    const answers = [
-      "Oui 👍",
-      "Non ❌",
-      "Peut-être 🤔",
-      "100% oui 🔥",
-      "Impossible 💀",
-      "Je ne sais pas 👀"
-    ];
+    maintenance = interaction.options.getBoolean("etat");
 
     return interaction.reply(
-      answers[Math.floor(Math.random() * answers.length)]
+      maintenance
+        ? "🔧 Mode maintenance ACTIVÉ"
+        : "🟢 Mode maintenance DÉSACTIVÉ"
     );
   }
 });
 
-// =====================
-// READY
-// =====================
-
+// 🤖 READY EVENT (version clean)
 client.on("ready", () => {
   console.log(`🟢 Bot connecté en tant que ${client.user.tag}`);
 });
 
-// =====================
-// LOGIN
-// =====================
-
+// 🔌 LOGIN
 client.login(TOKEN);
