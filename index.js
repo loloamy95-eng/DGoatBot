@@ -1,6 +1,22 @@
+const express = require("express");
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("DGoatBot est en ligne !");
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Serveur web lancé sur le port ${PORT}`);
+});
+
+// =====================
+// DISCORD BOT
+// =====================
+
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require("discord.js");
 
-// 🤖 Bot client
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -9,12 +25,15 @@ const client = new Client({
   ]
 });
 
-// 🔐 Variables (IMPORTANT: pas de token ici)
+// 🔐 CONFIG
 const CLIENT_ID = "1511794170614911106";
 const GUILD_ID = "1500223164481802471";
 const TOKEN = process.env.TOKEN;
 
-// 📌 Slash commands
+// =====================
+// SLASH COMMANDS
+// =====================
+
 const commands = [
   new SlashCommandBuilder()
     .setName("ping")
@@ -31,10 +50,26 @@ const commands = [
       option.setName("message")
         .setDescription("Message à envoyer")
         .setRequired(true)
+    ),
+
+  new SlashCommandBuilder()
+    .setName("blague")
+    .setDescription("Raconte une blague"),
+
+  new SlashCommandBuilder()
+    .setName("8ball")
+    .setDescription("Pose une question à la boule magique")
+    .addStringOption(option =>
+      option.setName("question")
+        .setDescription("Ta question")
+        .setRequired(true)
     )
 ].map(cmd => cmd.toJSON());
 
-// 🚀 Enregistrement des commandes
+// =====================
+// ENREGISTREMENT COMMANDES
+// =====================
+
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
 (async () => {
@@ -52,25 +87,30 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
   }
 })();
 
-// 💬 Messages random (optionnel fun)
+// =====================
+// EVENTS FUN
+// =====================
+
 client.on("messageCreate", (message) => {
   if (message.author.bot) return;
 
-  const responses = [
-    "Intéressant 👀",
-    "Hmm 🤔",
+  const replies = [
+    "Hmm intéressant 👀",
+    "Je vois ça 🤔",
     "Ok ok 😄",
-    "Explique un peu plus",
-    "Je vois 👀"
+    "Explique plus",
+    "Stylé ça 🔥"
   ];
 
-  if (Math.random() < 0.15) {
-    const reply = responses[Math.floor(Math.random() * responses.length)];
-    message.reply(reply);
+  if (Math.random() < 0.12) {
+    message.reply(replies[Math.floor(Math.random() * replies.length)]);
   }
 });
 
-// 🤖 Slash commands
+// =====================
+// INTERACTIONS
+// =====================
+
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -80,19 +120,49 @@ client.on("interactionCreate", async (interaction) => {
 
   if (interaction.commandName === "roll") {
     const result = Math.floor(Math.random() * 6) + 1;
-    return interaction.reply(`🎲 ${result}`);
+    return interaction.reply(`🎲 Tu as fait ${result}`);
   }
 
   if (interaction.commandName === "say") {
     const msg = interaction.options.getString("message");
     return interaction.reply(msg);
   }
+
+  if (interaction.commandName === "blague") {
+    const jokes = [
+      "Pourquoi les plongeurs plongent toujours en arrière ? Parce que sinon ils tombent dans le bateau 😂",
+      "Je connais une blague sur le JavaScript… mais elle est undefined 🤣",
+      "T’es tellement lent que même ton ombre t’a quitté 💀"
+    ];
+    return interaction.reply(jokes[Math.floor(Math.random() * jokes.length)]);
+  }
+
+  if (interaction.commandName === "8ball") {
+    const answers = [
+      "Oui 👍",
+      "Non ❌",
+      "Peut-être 🤔",
+      "100% oui 🔥",
+      "Impossible 💀",
+      "Je ne sais pas 👀"
+    ];
+
+    return interaction.reply(
+      answers[Math.floor(Math.random() * answers.length)]
+    );
+  }
 });
 
-// 🔌 Bot ready
+// =====================
+// READY
+// =====================
+
 client.on("ready", () => {
   console.log(`🟢 Bot connecté en tant que ${client.user.tag}`);
 });
 
-// 🚀 Login
+// =====================
+// LOGIN
+// =====================
+
 client.login(TOKEN);
